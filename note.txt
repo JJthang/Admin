@@ -1,0 +1,52 @@
+<template>
+    <div class="w-full p-5 bgAddProduct rounded-md">
+        <DataTable :value="customers" paginator :pt="{
+            dropdown: 'text-white'            
+        }" :rows="5" :rowsPerPageOptions="[5, 10, 20, 50]" tableStyle="min-width: 50rem"
+                paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
+                currentPageReportTemplate="{first} to {last} of {totalRecords}">
+            <template #paginatorstart>
+                <Button type="button" icon="pi pi-refresh" text />
+            </template>
+            <template #paginatorend>
+                <Button type="button" icon="pi pi-download" text />
+            </template>
+            <Column field="id" header="id" class="bg-[#2E313F] text-white" style="width: 15%" ></Column>
+            <Column field="Code" header="Code" class="bg-[#2E313F] text-white" style="width: 15%"></Column>
+            <Column field="Name" header="Name" class="bg-[#2E313F] text-white" style="width: 15%"></Column>
+            <Column field="Price" header="Price" class="bg-[#2E313F] text-white" style="width: 15%"></Column>
+            <Column field="Category" header="Category" class="bg-[#2E313F] text-white" style="width: 15%"></Column>
+            <Column field="Status" header="Status" class="bg-[#2E313F] text-white" style="width: 15%"></Column>
+            <Column :exportable="false" class="bg-[#2E313F] text-white" style="min-width:8rem">
+                <template #body="slotProps" class="flex">
+                   <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editProduct(slotProps.data)" />
+                   <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteProduct(slotProps.data)" />
+                </template>
+           </Column>
+        </DataTable>
+    </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import axios from 'axios'
+
+onMounted(() => {
+    axios.get('https://65532f3b5449cfda0f2e4651.mockapi.io/primeVue').then(({data}) => {
+        return customers.value = data
+    })
+});
+
+const customers = ref();
+
+</script>
+
+<style lang="css">
+#pv_id_6 {
+    display: flex;
+    gap: 10px;
+}
+.bgAddProduct{
+    background-color: #ffffff0d !important;
+}
+</style>
