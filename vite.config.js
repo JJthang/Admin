@@ -21,4 +21,13 @@ export default defineConfig({
       "@pages": path.resolve(__dirname, "./src/pages"),
     },
   },
+  // root: {
+  //   buildCommand: "yarn build-vercel",
+  //   rewrites: [
+  //     {
+  //       source: "/:path*",
+  //       destination: "/index.html",
+  //     },
+  //   ],
+  // },
 });

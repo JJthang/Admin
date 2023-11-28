@@ -18,12 +18,12 @@
                 </template>
             </Toolbar>
 
-            <DataTable ref="dt" :value="products" v-model:selection="selectedProducts" dataKey="id" 
+            <DataTable ref="dt" :value="data" :selection="selectedProducts" dataKey="id" 
                 :paginator="true" :rows="10" :filters="filters"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown" :rowsPerPageOptions="[5,10,25]"
                 currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products">
                 <template #header>
-                    <div class="flex flex-wrap gap-2 items-ce       nter justify-between">
+                    <div class="flex flex-wrap gap-2 items-center justify-between">
                         <h4 class="m-0 text-[#868C9B] rounded-md">Manage Products</h4>
 						<span class="p-input-icon-left p-2 rounded-md">
                             <i class="pi pi-search pr-2 pl-2" />
@@ -161,28 +161,25 @@
 import { ref, onMounted } from 'vue';
 import { FilterMatchMode } from 'primevue/api';
 import { useToast } from 'primevue/usetoast';
-import axios from "axios";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 
-onMounted(() => {
-    axios.get("https://65532f3b5449cfda0f2e4651.mockapi.io/DataPrime").then(({data}) => (products.value = data));
-});
 
 const toast = useToast();
 const dt = ref();
-const products = ref();
+const products = ref([]);
 const productDialog = ref(false);
 const deleteProductDialog = ref(false);
 const deleteProductsDialog = ref(false);
 const product = ref({});
 const selectedProducts = ref();
-import { postAPI, putAPI, deleteAPI } from "../../../api/product";
-// import { putAPI } from "../../../api/product";
+import { postAPI, putAPI, deleteAPI, getAPI } from "../../../api/product";
+const queryClient = useQueryClient();
 
-// putAPI
 const filters = ref({
     'global': {value: null, matchMode: FilterMatchMode.CONTAINS},
 });
-import { useMutation } from "@tanstack/vue-query";
+
+
 const submitted = ref(false);
 const statuses = ref([
     {label: 'INSTOCK', value: 'instock'},
@@ -190,14 +187,30 @@ const statuses = ref([
     {label: 'OUTOFSTOCK', value: 'outofstock'}
 ]);
 
-const {mutate} = useMutation({
-    mutationFn: (newTodo) => postAPI(newTodo)
+const {mutateAsync} = useMutation({
+    mutationFn: (newTodo) => postAPI(newTodo),
+    onSuccess : () => {
+        queryClient.invalidateQueries('productList')
+    }
 })
 const {mutate : updateProduct} = useMutation({
-    mutationFn: (newTodo) => putAPI(newTodo)
+    mutationFn: (newTodo) => putAPI(newTodo),
+    onSuccess: (data) => {
+        queryClient.setQueryData(['productList', data.data.id], data.data)
+    }
 })
-const {mutate : deleteMutate} = useMutation({
-    mutationFn: (newTodo) => putAPI(newTodo)
+const {mutateAsync : deleteMutate} = useMutation({
+    mutationFn: (newTodo) => {
+        console.log(newTodo);
+        return deleteAPI(newTodo)
+    }
+})
+const {data, refetch} = useQuery({
+    queryKey: ['productList'],
+    queryFn: () => getAPI(),
+    select: (data) => {
+        return data.data
+    }
 })
 const formatCurrency = (value) => {
     if(value)
@@ -213,33 +226,33 @@ const hideDialog = () => {
     productDialog.value = false;
     submitted.value = false;
 };
-const saveProduct = () => {
+const saveProduct = async () => {
     submitted.value = true;
 
     if (product.value.name.trim()) {
         if (product.value.id) {
-            product.value.inventoryStatus = product.value.inventoryStatus.value ? product.value.inventoryStatus.value : product.value.inventoryStatus;
-            products.value[findIndexById(product.value.id)] = product.value;
+            updateProduct(product.value)
             toast.add({severity:'success', summary: 'Successful', detail: 'Product Updated', life: 3000});
+            console.log('Chạy vào update');
         }
         else {
-            product.value.id = createId();
-            product.value.code = createId();
-            product.value.image = 'product-placeholder.svg';
+            console.log('Chạy vào add', product.value);
+            // product.value.id = createId();
+            // product.value.code = createId();
+            // product.value.image = 'product-placeholder.svg';
             product.value.inventoryStatus = product.value.inventoryStatus ? product.value.inventoryStatus.value : 'INSTOCK';
-            products.value.push(product.value);
+            // products.value.push(product.value);
+            await mutateAsync(product.value)
             toast.add({severity:'success', summary: 'Successful', detail: 'Product Created', life: 3000});
         }
-        mutate(product.value)
         productDialog.value = false;
         product.value = {};
-        // toast.add({severity:'success', summary: 'Successful', detail: 'Update Success', life: 3000});
     }
 };
 const editProduct = (prod) => {
     if (product.value) {
+        console.log("mới click đã chạy vào đây");
         product.value = {...prod};
-        updateProduct(product.value)
         productDialog.value = true;
     }
 };
@@ -247,13 +260,17 @@ const confirmDeleteProduct = (prod) => {
     product.value = prod;
     deleteProductDialog.value = true;
 };
-const deleteProduct = () => {
-    deleteMutate(product.value.id);
-    products.value = products.value.filter(val => val.id !== product.value.id);
+const deleteProduct = async () => {
     deleteProductDialog.value = false;
-    product.value = {};
+    await deleteMutate(product.value.id);
+    refetch(data)
     toast.add({severity:'success', summary: 'Successful', detail: 'Product Deleted', life: 3000});
 };
+
+onMounted(() => {
+    products.value = data;
+});
+
 const findIndexById = (id) => {
     let index = -1;
     for (let i = 0; i < products.value.length; i++) {
@@ -286,7 +303,7 @@ const deleteSelectedProducts = () => {
 };
 
 const getStatusLabel = (status) => {
-    switch (status) {
+    switch (status.label) {
         case 'INSTOCK':
             return 'success';
 

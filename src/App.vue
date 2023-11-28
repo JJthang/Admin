@@ -13,7 +13,7 @@
             }
           }" @click="handToggle" icon="pi pi-bars"></Button>
         </div>
-        <div class="flex gap-6">
+        <div class="flex gap-6 justify-center items-center">
           <Button class="text-white text-[5px] border-none"  icon="pi pi-search"></Button>
           <Button class="text-white border-none" icon="pi pi-bell" ></Button>
           <Button class="text-white border-none" icon="pi pi-comment"></Button>
